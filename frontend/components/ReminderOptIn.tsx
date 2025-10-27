@@ -44,6 +44,7 @@ export const ReminderOptIn = () => {
     }
 
     setEnabled(false);
+    setEnabled(storedOptIn && currentPermission === 'granted');
   }, []);
 
   const handleToggle = async () => {
