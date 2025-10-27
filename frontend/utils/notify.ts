@@ -3,6 +3,7 @@
 // Durasi jeda sebelum notifikasi abandoned cart—ubah (dalam ms) sesuai kebijakanmu.
 const ABANDONMENT_DELAY_MS = 15 * 60 * 1000;
 export const REMINDER_STORAGE_KEY = 'kue-tampah-cart-reminder-sent';
+const REMINDER_OPT_IN_STORAGE_KEY = 'kue-tampah-cart-reminder-opt-in';
 
 let reminderTimeout: number | null = null;
 
@@ -57,14 +58,36 @@ const showCartNotification = async () => {
   }
 };
 
-export const requestNotificationPermission = async () => {
-  if (!isBrowser() || !('Notification' in window)) return;
-  if (Notification.permission === 'default') {
-    try {
-      await Notification.requestPermission();
-    } catch {
-      // ignore
-    }
+type NotificationPermissionStatus = NotificationPermission | 'unsupported';
+
+const safeGetItem = (key: string) => {
+  if (!isBrowser()) return null;
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+
+const safeSetItem = (key: string, value: string) => {
+  if (!isBrowser()) return;
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // ignore storage failures
+  }
+};
+
+export const requestNotificationPermission = async (): Promise<NotificationPermissionStatus> => {
+  if (!isBrowser() || !('Notification' in window)) return 'unsupported';
+  if (Notification.permission !== 'default') {
+    return Notification.permission;
+  }
+
+  try {
+    return await Notification.requestPermission();
+  } catch {
+    return Notification.permission;
   }
 };
 
@@ -80,8 +103,13 @@ export const cancelAbandonedCartReminder = () => {
 };
 
 export const storeReminderSent = (value: boolean) => {
-  if (!isBrowser()) return;
-  window.localStorage.setItem(REMINDER_STORAGE_KEY, value ? 'true' : 'false');
+  safeSetItem(REMINDER_STORAGE_KEY, value ? 'true' : 'false');
+};
+
+export const getReminderOptIn = () => safeGetItem(REMINDER_OPT_IN_STORAGE_KEY) === 'true';
+
+export const setReminderOptIn = (value: boolean) => {
+  safeSetItem(REMINDER_OPT_IN_STORAGE_KEY, value ? 'true' : 'false');
 };
 
 export const scheduleAbandonedCartReminder = async ({

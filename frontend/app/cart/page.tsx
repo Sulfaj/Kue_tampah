@@ -1,7 +1,7 @@
 'use client';
 
 import type { FormEvent } from 'react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Minus, Plus, Search, Trash } from 'lucide-react';
@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 import { useCart } from '@/context/CartContext';
 import { formatCurrency } from '@/lib/currency';
 import { products, type Product } from '@/lib/products';
+import { ReminderOptIn } from '@/components/ReminderOptIn';
 
 type CartEntry = {
   id: string;
@@ -94,7 +95,17 @@ export default function CartPage() {
   }, [items]);
 
   // Produk rekomendasi di panel kanan—ubah sumber data bila ingin filter atau sorting khusus.
-  const displayedProducts = useMemo(() => products, []);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const displayedProducts = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) return products;
+
+    return products.filter((product) => {
+      const haystack = `${product.name} ${product.description ?? ''} ${product.flavorNotes ?? ''}`.toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [searchTerm]);
 
   const handleIncrement = (item: CartEntry) => {
     updateQuantity(item.id, item.quantity + 1);
@@ -236,6 +247,7 @@ export default function CartPage() {
                     </button>
                   </div>
                 </div>
+                <ReminderOptIn />
               </section>
             </>
           )}
@@ -254,7 +266,10 @@ export default function CartPage() {
               />
               <input
                 type="search"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="Cari tampah, jajan pasar, snack box..."
+                aria-label="Cari produk untuk ditambahkan ke keranjang"
                 className="h-12 w-full rounded-full border border-[var(--brand-muted)]/18 bg-white pl-11 pr-4 text-sm text-[var(--brand-black)] shadow-[0_1px_0_rgba(0,0,0,0.04)] transition focus:border-[var(--brand-green-600)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-green-200)]"
               />
             </div>
@@ -275,46 +290,52 @@ export default function CartPage() {
             </div>
 
             <div className="mt-6 space-y-4">
-              {displayedProducts.map((product) => {
-                const quantityInCart = cartQuantities.get(product.id) ?? 0;
-                return (
-                  <article
-                    key={product.id}
-                    className="flex items-center gap-4 rounded-[20px] border border-[var(--brand-muted)]/12 bg-white p-4 shadow-sm"
-                  >
-                    <div className="relative h-16 w-16 overflow-hidden rounded-[16px] bg-white">
-                      <Image
-                        src={product.images.primary}
-                        alt={product.name}
-                        fill
-                        className="object-cover"
-                        sizes="64px"
-                      />
-                    </div>
-                    <div className="flex flex-1 flex-col gap-1">
-                      <span className="text-sm font-semibold text-[var(--brand-black)]">{product.name}</span>
-                      <span className="text-xs leading-5 text-[var(--brand-muted)]">{product.description}</span>
-                      <span className="text-xs font-semibold text-[var(--brand-green-800)]">
-                        {formatCurrency(product.price)}
-                      </span>
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                      {quantityInCart > 0 && (
-                        <span className="rounded-full bg-[var(--brand-panel)] px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--brand-muted)]">
-                          {quantityInCart} di keranjang
+              {displayedProducts.length === 0 ? (
+                <p className="rounded-[16px] bg-[var(--brand-panel)] px-4 py-3 text-xs text-[var(--brand-muted)]">
+                  Tidak ada menu yang cocok dengan pencarianmu. Coba kata kunci lain atau jelajahi katalog lengkap.
+                </p>
+              ) : (
+                displayedProducts.map((product) => {
+                  const quantityInCart = cartQuantities.get(product.id) ?? 0;
+                  return (
+                    <article
+                      key={product.id}
+                      className="flex items-center gap-4 rounded-[20px] border border-[var(--brand-muted)]/12 bg-white p-4 shadow-sm"
+                    >
+                      <div className="relative h-16 w-16 overflow-hidden rounded-[16px] bg-white">
+                        <Image
+                          src={product.images.primary}
+                          alt={product.name}
+                          fill
+                          className="object-cover"
+                          sizes="64px"
+                        />
+                      </div>
+                      <div className="flex flex-1 flex-col gap-1">
+                        <span className="text-sm font-semibold text-[var(--brand-black)]">{product.name}</span>
+                        <span className="text-xs leading-5 text-[var(--brand-muted)]">{product.description}</span>
+                        <span className="text-xs font-semibold text-[var(--brand-green-800)]">
+                          {formatCurrency(product.price)}
                         </span>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => handleQuickAdd(product)}
-                        className="rounded-full bg-[var(--brand-green-600)] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[var(--brand-green-800)]"
-                      >
-                        Tambah
-                      </button>
-                    </div>
-                  </article>
-                );
-              })}
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        {quantityInCart > 0 && (
+                          <span className="rounded-full bg-[var(--brand-panel)] px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--brand-muted)]">
+                            {quantityInCart} di keranjang
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleQuickAdd(product)}
+                          className="rounded-full bg-[var(--brand-green-600)] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[var(--brand-green-800)]"
+                        >
+                          Tambah
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })
+              )}
             </div>
           </section>
         </aside>
