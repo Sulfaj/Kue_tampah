@@ -50,15 +50,20 @@ export const Navbar = () => {
             onClick={handleToggle}
             className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[var(--brand-brown-300)] text-[var(--brand-brown-500)] transition hover:bg-[var(--brand-cream-100)] md:hidden"
             aria-label="Toggle navigasi"
+            aria-expanded={open}
+            aria-controls="mobile-navigation"
+            aria-haspopup="true"
           >
             {open ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
       </div>
       <div
+        id="mobile-navigation"
         className={`md:hidden transition-transform duration-300 ${
           open ? 'translate-y-0 opacity-100' : '-translate-y-2 opacity-0 pointer-events-none'
         }`}
+        aria-hidden={!open}
       >
         <nav className="space-y-4 border-t border-[var(--brand-cream-200)] bg-white px-6 py-6 text-sm font-medium text-[var(--brand-muted)] shadow-lg">
           {navigationItems.map((item) => (

@@ -72,14 +72,19 @@ export const CheckoutForm = () => {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const stored = window.localStorage.getItem(CHECKOUT_FORM_STORAGE_KEY);
-    if (stored) {
+
+    try {
+      const stored = window.localStorage.getItem(CHECKOUT_FORM_STORAGE_KEY);
+      if (!stored) return;
+
       try {
         const parsed = JSON.parse(stored);
         reset({ ...defaultFormValues, ...parsed });
       } catch {
         reset(defaultFormValues);
       }
+    } catch {
+      // localStorage might be unavailable (e.g., Safari private mode)
     }
   }, [reset]);
 
@@ -87,7 +92,13 @@ export const CheckoutForm = () => {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    window.localStorage.setItem(CHECKOUT_FORM_STORAGE_KEY, JSON.stringify(watchedValues));
+
+    try {
+      const serialized = JSON.stringify(watchedValues);
+      window.localStorage.setItem(CHECKOUT_FORM_STORAGE_KEY, serialized);
+    } catch {
+      // Ignore write errors—users can continue without persistence.
+    }
   }, [watchedValues]);
 
   // Nomor WhatsApp fallback—ganti default atau gunakan env NEXT_PUBLIC_WHATSAPP_NUMBER.

@@ -1,13 +1,15 @@
 'use client';
 
+import { useEffect, useMemo } from 'react';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
 import { getProductById, Product } from '@/lib/products';
 import {
   cancelAbandonedCartReminder,
-  requestNotificationPermission,
+  getReminderOptIn,
   scheduleAbandonedCartReminder,
+  setReminderOptIn,
   storeReminderSent,
 } from '@/utils/notify';
 
@@ -98,6 +100,22 @@ export const useCart = () => {
   const { items, lastUpdated, reminderSent, addItem, removeItem, updateQuantity, clearCart, markReminderSent } =
     useCartStore();
 
+  const missingProductIds = useMemo(
+    () => items.filter((item) => !getProductById(item.id)).map((item) => item.id),
+    [items],
+  );
+
+  useEffect(() => {
+    if (missingProductIds.length === 0) return;
+
+    useCartStore.setState((state) => ({
+      ...state,
+      items: state.items.filter((item) => !missingProductIds.includes(item.id)),
+      lastUpdated: Date.now(),
+      reminderSent: false,
+    }));
+  }, [missingProductIds]);
+
   const detailedItems = getCartProducts(items);
   const subtotal = detailedItems.reduce((total, entry) => total + entry.quantity * entry.product.price, 0);
   const itemCount = detailedItems.reduce((total, entry) => total + entry.quantity, 0);
@@ -132,7 +150,18 @@ export const initializeReminderWatcher = () => {
     return;
   }
 
-  requestNotificationPermission();
+  if (!getReminderOptIn()) {
+    cancelAbandonedCartReminder();
+    storeReminderSent(false);
+    return;
+  }
+
+  if ('Notification' in window && Notification.permission !== 'granted') {
+    setReminderOptIn(false);
+    cancelAbandonedCartReminder();
+    storeReminderSent(false);
+    return;
+  }
 
   void scheduleAbandonedCartReminder({
     lastUpdated: lastUpdated ?? Date.now(),
