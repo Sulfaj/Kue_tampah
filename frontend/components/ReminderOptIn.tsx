@@ -37,6 +37,13 @@ export const ReminderOptIn = () => {
       return;
     }
 
+    if (storedOptIn && currentPermission === 'granted') {
+      setEnabled(true);
+      initializeReminderWatcher();
+      return;
+    }
+
+    setEnabled(false);
     setEnabled(storedOptIn && currentPermission === 'granted');
   }, []);
 

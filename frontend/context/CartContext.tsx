@@ -5,6 +5,13 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
 import { getProductById, Product } from '@/lib/products';
+import {
+  cancelAbandonedCartReminder,
+  getReminderOptIn,
+  scheduleAbandonedCartReminder,
+  setReminderOptIn,
+  storeReminderSent,
+} from '@/utils/notify';
 import { cancelAbandonedCartReminder, getReminderOptIn, scheduleAbandonedCartReminder, storeReminderSent } from '@/utils/notify';
 
 type CartItem = {
@@ -145,6 +152,13 @@ export const initializeReminderWatcher = () => {
   }
 
   if (!getReminderOptIn()) {
+    cancelAbandonedCartReminder();
+    storeReminderSent(false);
+    return;
+  }
+
+  if ('Notification' in window && Notification.permission !== 'granted') {
+    setReminderOptIn(false);
     cancelAbandonedCartReminder();
     storeReminderSent(false);
     return;
